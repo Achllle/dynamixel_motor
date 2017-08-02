@@ -64,7 +64,7 @@ class DynamixelIO(object):
         try:
             self.serial_mutex = Lock()
             self.ser = None
-            self.ser = serial.Serial(port, baudrate, timeout=0.015)
+            self.ser = serial.Serial(port, baudrate, timeout=0.06)
             self.port_name = port
             self.readback_echo = readback_echo
         except SerialOpenError:
@@ -863,9 +863,6 @@ class DynamixelIO(object):
             writeableVals.append( (sid, loPositionVal, hiPositionVal, loSpeedVal, hiSpeedVal) )
 
         # use sync write to broadcast multi servo message
-        print 'port', self.port_name
-        print 'dxl goal', DXL_GOAL_POSITION_L
-        print tuple(writeableVals)
         self.sync_write(DXL_GOAL_POSITION_L, tuple(writeableVals))
 
 
