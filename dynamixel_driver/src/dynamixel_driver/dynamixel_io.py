@@ -262,8 +262,7 @@ class DynamixelIO(object):
         packet.extend(flattened)
         packet.append(checksum)
 
-        packetStr = array('B', packet).tostring() # packetStr = ''.join([chr(byte) for byte in packet])
-        print 'packetStr', array('B', packet)
+        packetStr = array('B', packet).tostring()  # packetStr = ''.join([chr(byte) for byte in packet])
 
         with self.serial_mutex:
             self.__write_serial(packetStr)
