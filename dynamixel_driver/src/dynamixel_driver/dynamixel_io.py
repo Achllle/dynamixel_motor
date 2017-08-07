@@ -194,58 +194,58 @@ class DynamixelIO(object):
         550, the method should be called like:
             sync_write(DXL_GOAL_POSITION_L, ( (1, 20, 1), (2 ,38, 2) ))
         """
-        for dat in data: 
-            servo_id = dat[0]
-            if len(dat) == 5:
-                da = (dat[1], dat[2], dat[3], dat[4])
-            elif len(dat) == 3:
-                da = (dat[1], dat[2])
-	    elif len(dat) == 2:
-                da = (dat[1],)
-            else:
-                print "another case, lolz"
-
-	    # Number of bytes following standard header (0xFF, 0xFF, id, length)
-	    length = 3 + len(da)  # instruction, address, len(data), checksum
-
-	    # directly from AX-12 manual:
-	    # Check Sum = ~ (ID + LENGTH + INSTRUCTION + PARAM_1 + ... + PARAM_N)
-	    # If the calculated value is > 255, the lower byte is the check sum.
-	    checksum = 255 - ((servo_id + length + DXL_WRITE_DATA + address + sum(da)) % 256)
-
-            # packet: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
-	    packet = [0xFF, 0xFF, servo_id, length, DXL_WRITE_DATA, address]
-	    packet.extend(da)
-	    packet.append(checksum)
-
-            packetStr = array('B', packet).tostring() # packetStr = ''.join([chr(byte) for byte in packet])
-	    with self.serial_mutex:
-	        self.__write_serial(packetStr)
-	        # wait for response packet from the motor
-	        time.sleep(0.0013)
-
-	        # read response
-                failcounter = 0
-                success = False
-                while failcounter < 100 and success == False:
-                    try:
-	                data = self.__read_response(servo_id)
-                        excepted = False
-                    except DroppedPacketError:
-                        print 'DroppedPacketErrors, sending again'
-                        time.sleep(0.025)
-                        self.__write_serial(packetStr)
-                        time.sleep(0.0013)
-                        failcounter += 1
-                        excepted = True
-                    if not excepted:
-                        success = True
-
-            if failcounter > 0 and success:
-                print 'Recovered from multiple sending failures'
-            if not success:
-                raise DroppedPacketError("Failed to communicate with motor %s" %servo_id)
-        return
+        # for dat in data:
+        #     servo_id = dat[0]
+        #     if len(dat) == 5:
+        #         da = (dat[1], dat[2], dat[3], dat[4])
+        #     elif len(dat) == 3:
+        #         da = (dat[1], dat[2])
+        # elif len(dat) == 2:
+        #         da = (dat[1],)
+        #     else:
+        #         print "another case, lolz"
+        #
+        # # Number of bytes following standard header (0xFF, 0xFF, id, length)
+        # length = 3 + len(da)  # instruction, address, len(data), checksum
+        #
+        # # directly from AX-12 manual:
+        # # Check Sum = ~ (ID + LENGTH + INSTRUCTION + PARAM_1 + ... + PARAM_N)
+        # # If the calculated value is > 255, the lower byte is the check sum.
+        # checksum = 255 - ((servo_id + length + DXL_WRITE_DATA + address + sum(da)) % 256)
+        #
+        #     # packet: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
+        # packet = [0xFF, 0xFF, servo_id, length, DXL_WRITE_DATA, address]
+        # packet.extend(da)
+        # packet.append(checksum)
+        #
+        #     packetStr = array('B', packet).tostring() # packetStr = ''.join([chr(byte) for byte in packet])
+        # with self.serial_mutex:
+	     #    self.__write_serial(packetStr)
+	     #    # wait for response packet from the motor
+	     #    time.sleep(0.0013)
+        #
+	     #    # read response
+        #         failcounter = 0
+        #         success = False
+        #         while failcounter < 100 and success == False:
+        #             try:
+	     #            data = self.__read_response(servo_id)
+        #                 excepted = False
+        #             except DroppedPacketError:
+        #                 print 'DroppedPacketErrors, sending again'
+        #                 time.sleep(0.025)
+        #                 self.__write_serial(packetStr)
+        #                 time.sleep(0.0013)
+        #                 failcounter += 1
+        #                 excepted = True
+        #             if not excepted:
+        #                 success = True
+        #
+        #     if failcounter > 0 and success:
+        #         print 'Recovered from multiple sending failures'
+        #     if not success:
+        #         raise DroppedPacketError("Failed to communicate with motor %s" %servo_id)
+        # return
 
         # Calculate length and sum of all data
         flattened = [value for servo in data for value in servo]
