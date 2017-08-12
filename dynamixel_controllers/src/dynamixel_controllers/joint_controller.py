@@ -49,6 +49,11 @@ from dynamixel_driver.dynamixel_const import *
 
 from dynamixel_controllers.srv import SetSpeed
 from dynamixel_controllers.srv import TorqueEnable
+from dynamixel_controllers.srv import SetPGain
+from dynamixel_controllers.srv import SetIGain
+from dynamixel_controllers.srv import SetDGain
+from dynamixel_controllers.srv import TorqueEnable
+from dynamixel_controllers.srv import TorqueEnable
 from dynamixel_controllers.srv import SetComplianceSlope
 from dynamixel_controllers.srv import SetComplianceMargin
 from dynamixel_controllers.srv import SetCompliancePunch
@@ -66,6 +71,9 @@ class JointController:
         self.port_namespace = port_namespace
         self.joint_name = rospy.get_param(self.controller_namespace + '/joint_name')
         self.joint_speed = rospy.get_param(self.controller_namespace + '/joint_speed', 1.0)
+        self.p_gain = rospy.get_param(self.controller_namespace + '/p_gain', 32)
+        self.i_gain = rospy.get_param(self.controller_namespace + '/i_gain', 0)
+        self.d_gain = rospy.get_param(self.controller_namespace + '/d_gain', 0)
         self.compliance_slope = rospy.get_param(self.controller_namespace + '/joint_compliance_slope', None)
         self.compliance_margin = rospy.get_param(self.controller_namespace + '/joint_compliance_margin', None)
         self.compliance_punch = rospy.get_param(self.controller_namespace + '/joint_compliance_punch', None)
@@ -74,11 +82,22 @@ class JointController:
         self.__ensure_limits()
         
         self.speed_service = rospy.Service(self.controller_namespace + '/set_speed', SetSpeed, self.process_set_speed)
-        self.torque_service = rospy.Service(self.controller_namespace + '/torque_enable', TorqueEnable, self.process_torque_enable)
-        self.compliance_slope_service = rospy.Service(self.controller_namespace + '/set_compliance_slope', SetComplianceSlope, self.process_set_compliance_slope)
-        self.compliance_marigin_service = rospy.Service(self.controller_namespace + '/set_compliance_margin', SetComplianceMargin, self.process_set_compliance_margin)
-        self.compliance_punch_service = rospy.Service(self.controller_namespace + '/set_compliance_punch', SetCompliancePunch, self.process_set_compliance_punch)
-        self.torque_limit_service = rospy.Service(self.controller_namespace + '/set_torque_limit', SetTorqueLimit, self.process_set_torque_limit)
+        self.torque_service = rospy.Service(self.controller_namespace + '/torque_enable', TorqueEnable,
+                                            self.process_torque_enable)
+        self.p_gain_service = rospy.Service(self.controller_namespace + '/set_p_gain', SetPGain,
+                                            self.process_set_p_gain)
+        self.i_gain_service = rospy.Service(self.controller_namespace + '/set_i_gain', SetIGain,
+                                            self.process_set_i_gain)
+        self.d_gain_service = rospy.Service(self.controller_namespace + '/set_d_gain', SetDGain,
+                                            self.process_set_d_gain)
+        self.compliance_slope_service = rospy.Service(self.controller_namespace + '/set_compliance_slope',
+                                                      SetComplianceSlope, self.process_set_compliance_slope)
+        self.compliance_margin_service = rospy.Service(self.controller_namespace + '/set_compliance_margin',
+                                                        SetComplianceMargin, self.process_set_compliance_margin)
+        self.compliance_punch_service = rospy.Service(self.controller_namespace + '/set_compliance_punch',
+                                                      SetCompliancePunch, self.process_set_compliance_punch)
+        self.torque_limit_service = rospy.Service(self.controller_namespace + '/set_torque_limit', SetTorqueLimit,
+                                                  self.process_set_torque_limit)
 
     def __ensure_limits(self):
         if self.compliance_slope is not None:
@@ -99,6 +118,27 @@ class JointController:
         if self.torque_limit is not None:
             if self.torque_limit < 0: self.torque_limit = 0.0
             elif self.torque_limit > 1: self.torque_limit = 1.0
+
+        if self.p_gain < 0:
+            rospy.logwarn('P gain too low (< 0). Setting to 1.')
+            self.p_gain = 1
+        elif self.p_gain > 128:
+            rospy.logwarn('P gain too high (> 128). Setting to 128.')
+            self.p_gain = 128
+
+        if self.i_gain < 0:
+            rospy.logwarn('I gain too low (< 0). Setting to 0.')
+            self.i_gain = 0
+        elif self.i_gain > 128:
+            rospy.logwarn('I gain too high (> 128). Setting to 128.')
+            self.i_gain = 128
+
+        if self.d_gain < 0:
+            rospy.logwarn('D gain too low (< 0). Setting to 0.')
+            self.d_gain = 0
+        elif self.d_gain > 128:
+            rospy.logwarn('D gain too high (> 128). Setting to 128.')
+            self.d_gain = 128
 
     def initialize(self):
         raise NotImplementedError
