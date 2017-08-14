@@ -51,6 +51,7 @@ from dynamixel_controllers.joint_controller import JointController
 
 from dynamixel_msgs.msg import JointState
 
+
 class JointPositionController(JointController):
     def __init__(self, dxl_io, controller_namespace, port_namespace):
         JointController.__init__(self, dxl_io, controller_namespace, port_namespace)
@@ -110,6 +111,11 @@ class JointPositionController(JointController):
         elif self.joint_speed > self.joint_max_speed: self.joint_speed = self.joint_max_speed
         
         self.set_speed(self.joint_speed)
+
+        # set motor PID gains
+        self.set_p_gain(self.p_gain)
+        self.set_i_gain(self.i_gain)
+        self.set_d_gain(self.d_gain)
         
         return True
 
@@ -158,6 +164,24 @@ class JointPositionController(JointController):
         raw_torque_val = int(DXL_MAX_TORQUE_TICK * max_torque)
         mcv = (self.motor_id, raw_torque_val)
         self.dxl_io.set_multi_torque_limit([mcv])
+
+    def set_p_gain(self, p_gain):
+        if p_gain < self.p_gain_min: p_gain = self.p_gain_min
+        elif p_gain > self.p_gain_max: p_gain = self.p_gain_max
+        else: p_gain = int(p_gain)
+        self.dxl_io.set_p_gain(self.motor_id, p_gain)
+
+    def set_i_gain(self, i_gain):
+        if i_gain < self.i_gain_min: i_gain = self.i_gain_min
+        elif i_gain > self.i_gain_max: i_gain = self.i_gain_max
+        else: i_gain = int(i_gain)
+        self.dxl_io.set_i_gain(self.motor_id, i_gain)
+
+    def set_d_gain(self, d_gain):
+        if d_gain < self.d_gain_min: d_gain = self.d_gain_min
+        elif d_gain > self.d_gain_max: d_gain = self.d_gain_max
+        else: d_gain = int(d_gain)
+        self.dxl_io.set_d_gain(self.motor_id, d_gain)
 
     def set_acceleration_raw(self, acc):
         if acc < 0: acc = 0

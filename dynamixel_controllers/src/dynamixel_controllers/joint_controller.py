@@ -63,6 +63,7 @@ from std_msgs.msg import Float64
 from dynamixel_msgs.msg import MotorStateList
 from dynamixel_msgs.msg import JointState
 
+
 class JointController:
     def __init__(self, dxl_io, controller_namespace, port_namespace):
         self.running = False
@@ -78,10 +79,19 @@ class JointController:
         self.compliance_margin = rospy.get_param(self.controller_namespace + '/joint_compliance_margin', None)
         self.compliance_punch = rospy.get_param(self.controller_namespace + '/joint_compliance_punch', None)
         self.torque_limit = rospy.get_param(self.controller_namespace + '/joint_torque_limit', None)
-        
+
+        # define PID gain limits
+        self.p_gain_min = 1
+        self.p_gain_max = 128
+        self.i_gain_min = 0
+        self.i_gain_max = 128
+        self.d_gain_min = 0
+        self.d_gain_max = 128
+
         self.__ensure_limits()
         
-        self.speed_service = rospy.Service(self.controller_namespace + '/set_speed', SetSpeed, self.process_set_speed)
+        self.speed_service = rospy.Service(self.controller_namespace + '/set_speed', SetSpeed,
+                                           self.process_set_speed)
         self.torque_service = rospy.Service(self.controller_namespace + '/torque_enable', TorqueEnable,
                                             self.process_torque_enable)
         self.p_gain_service = rospy.Service(self.controller_namespace + '/set_p_gain', SetPGain,
@@ -119,26 +129,26 @@ class JointController:
             if self.torque_limit < 0: self.torque_limit = 0.0
             elif self.torque_limit > 1: self.torque_limit = 1.0
 
-        if self.p_gain < 0:
-            rospy.logwarn('P gain too low (< 0). Setting to 1.')
-            self.p_gain = 1
-        elif self.p_gain > 128:
-            rospy.logwarn('P gain too high (> 128). Setting to 128.')
-            self.p_gain = 128
+        if self.p_gain < self.p_gain_min:
+            rospy.logwarn('P gain too low. Setting to %d.', self.p_gain_min)
+            self.p_gain = self.p_gain_min
+        elif self.p_gain > self.p_gain_max:
+            rospy.logwarn('P gain too high. Setting to %d.', self.p_gain_max)
+            self.p_gain = self.p_gain_max
 
-        if self.i_gain < 0:
-            rospy.logwarn('I gain too low (< 0). Setting to 0.')
-            self.i_gain = 0
-        elif self.i_gain > 128:
-            rospy.logwarn('I gain too high (> 128). Setting to 128.')
-            self.i_gain = 128
+        if self.i_gain < self.i_gain_min:
+            rospy.logwarn('I gain too low. Setting to %d.', self.i_gain_min)
+            self.i_gain = self.i_gain_min
+        elif self.i_gain > self.i_gain_max:
+            rospy.logwarn('I gain too high. Setting to %d.', self.i_gain_max)
+            self.i_gain = self.i_gain_max
 
-        if self.d_gain < 0:
-            rospy.logwarn('D gain too low (< 0). Setting to 0.')
-            self.d_gain = 0
-        elif self.d_gain > 128:
-            rospy.logwarn('D gain too high (> 128). Setting to 128.')
-            self.d_gain = 128
+        if self.d_gain < self.d_gain_min:
+            rospy.logwarn('D gain too low. Setting to %d.', self.d_gain_min)
+            self.d_gain = self.d_gain_min
+        elif self.d_gain > self.d_gain_max:
+            rospy.logwarn('D gain too high. Setting to %d.', self.d_gain_max)
+            self.d_gain = self.d_gain_max
 
     def initialize(self):
         raise NotImplementedError
@@ -147,7 +157,8 @@ class JointController:
         self.running = True
         self.joint_state_pub = rospy.Publisher(self.controller_namespace + '/state', JointState, queue_size=1)
         self.command_sub = rospy.Subscriber(self.controller_namespace + '/command', Float64, self.process_command)
-        self.motor_states_sub = rospy.Subscriber('motor_states/%s' % self.port_namespace, MotorStateList, self.process_motor_states)
+        self.motor_states_sub = rospy.Subscriber('motor_states/%s' % self.port_namespace, MotorStateList,
+                                                 self.process_motor_states)
 
     def stop(self):
         self.running = False
@@ -157,6 +168,11 @@ class JointController:
         self.speed_service.shutdown('normal shutdown')
         self.torque_service.shutdown('normal shutdown')
         self.compliance_slope_service.shutdown('normal shutdown')
+        self.compliance_margin_service.shutdown('normal shutdown')
+        self.compliance_punch_service.shutdown('normal shutdown')
+        self.p_gain_service.shutdown('normal shutdown')
+        self.i_gain_service.shutdown('normal shutdown')
+        self.d_gain_service.shutdown('normal shutdown')
 
     def set_torque_enable(self, torque_enable):
         raise NotImplementedError
@@ -174,6 +190,15 @@ class JointController:
         raise NotImplementedError
 
     def set_torque_limit(self, max_torque):
+        raise NotImplementedError
+
+    def set_p_gain(self, p_gain):
+        raise NotImplementedError
+
+    def set_i_gain(self, i_gain):
+        raise NotImplementedError
+
+    def set_d_gain(self, d_gain):
         raise NotImplementedError
 
     def process_set_speed(self, req):
@@ -198,6 +223,18 @@ class JointController:
 
     def process_set_torque_limit(self, req):
         self.set_torque_limit(req.torque_limit)
+        return []
+
+    def process_set_p_gain(self, req):
+        self.set_p_gain(req.p_gain)
+        return []
+
+    def process_set_i_gain(self, req):
+        self.set_i_gain(req.i_gain)
+        return []
+
+    def process_set_d_gain(self, req):
+        self.set_d_gain(req.d_gain)
         return []
 
     def process_motor_states(self, state_list):
