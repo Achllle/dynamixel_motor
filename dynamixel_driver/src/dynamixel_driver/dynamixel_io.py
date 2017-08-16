@@ -44,6 +44,8 @@ __email__ = 'anton@email.arizona.edu'
 
 import time
 import serial
+import rospy
+from std_msgs.msg import String
 from array import array
 from binascii import b2a_hex
 from threading import Lock
@@ -68,6 +70,10 @@ class DynamixelIO(object):
             self.port_name = port
             self.readback_echo = readback_echo
             self.delay_response = 0.002
+
+            # start publisher for error handling
+            self.overload_pub = rospy.Publisher('/overload', String, queue_size=1)
+
         except SerialOpenError:
            raise SerialOpenError(port, baudrate)
 
@@ -1044,6 +1050,8 @@ class DynamixelIO(object):
         if not error_code & DXL_OVERLOAD_ERROR == 0:
             msg = 'Overload Error ' + ex_message
             exception = FatalErrorCodeError(msg, error_code)
+            pub_str = 'servo_id%d' % servo_id
+            self.overload_pub.publish(pub_str)
         if not error_code & DXL_INPUT_VOLTAGE_ERROR == 0:
             msg = 'Input Voltage Error ' + ex_message
             exception = NonfatalErrorCodeError(msg, error_code)
