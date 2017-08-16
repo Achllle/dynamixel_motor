@@ -240,7 +240,7 @@ class DynamixelIO(object):
                         data = self.__read_response(servo_id)
                         excepted = False
                     except DroppedPacketError:
-                        print 'DroppedPacketErrors, sending again'
+                        rospy.logwarn('Dropped packet on servo_id%d, trying again ... ', servo_id)
                         time.sleep(0.025)
                         self.__write_serial(packetStr)
                         time.sleep(0.0013)
